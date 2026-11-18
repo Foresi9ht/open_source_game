@@ -1,0 +1,510 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Квест «Открытый код»</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: one narrow column styled like a repository issue thread — header with stat "badges", the scene as an issue, the feedback as a code review. */
+:root {
+  --bg: #edf0f6;
+  --surface: #ffffff;
+  --surface-2: #f5f7fb;
+  --ink: #161b2e;
+  --muted: #5a6177;
+  --line: #d6dbe7;
+  --accent: #3346c9;
+  --accent-ink: #ffffff;
+  --badge-dark: #3a4157;
+  --good: #1d7f4e;
+  --good-bg: #e3f4ea;
+  --mixed: #9a6200;
+  --mixed-bg: #fbf0d9;
+  --bad: #b42d3a;
+  --bad-bg: #fbe5e7;
+  --font-display: "Unbounded", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Golos Text", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1220; --surface: #161b2c; --surface-2: #1c2236; --ink: #e5e8f2; --muted: #9aa2bb; --line: #2a3149;
+    --accent: #8f9cff; --accent-ink: #0e1220; --badge-dark: #2a3149;
+    --good: #5fd49a; --good-bg: #12301f; --mixed: #f0b54c; --mixed-bg: #33270f; --bad: #ff7b86; --bad-bg: #3a161b;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1220; --surface: #161b2c; --surface-2: #1c2236; --ink: #e5e8f2; --muted: #9aa2bb; --line: #2a3149;
+  --accent: #8f9cff; --accent-ink: #0e1220; --badge-dark: #2a3149;
+  --good: #5fd49a; --good-bg: #12301f; --mixed: #f0b54c; --mixed-bg: #33270f; --bad: #ff7b86; --bad-bg: #3a161b;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 16px; line-height: 1.55;
+  padding-block: 20px 48px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.wrap { max-width: 720px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; }
+.repo { font-family: var(--font-mono); font-size: 13px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 12px; align-items: center; justify-content: space-between; }
+.repo b { color: var(--ink); font-weight: 600; }
+.step { font-variant-numeric: tabular-nums; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.badge { display: flex; font-family: var(--font-mono); font-size: 12px; border-radius: 4px; overflow: hidden; width: 100%; }
+.badge span { padding: 2px 6px; white-space: nowrap; }
+.badge .k { background: var(--badge-dark); color: #fff; flex: 1; overflow: hidden; text-overflow: ellipsis; }
+.badge .v { color: #fff; font-weight: 600; font-variant-numeric: tabular-nums; min-width: 3ch; text-align: center; }
+.lvl-hi { background: #2c9a5f; } .lvl-mid { background: #c28a14; } .lvl-lo { background: #cc3d4a; }
+.bar { height: 4px; border-radius: 2px; background: var(--surface-2); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--accent); transition: width .4s ease; }
+.card { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+.card-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 12px 18px; border-bottom: 1px solid var(--line); background: var(--surface-2); font-family: var(--font-mono); font-size: 12.5px; color: var(--muted); }
+.state { display: inline-flex; align-items: center; gap: 6px; background: var(--good); color: var(--accent-ink); padding: 2px 10px; border-radius: 999px; font-weight: 600; }
+.state.closed { background: var(--accent); }
+.label { border: 1px solid var(--line); background: var(--surface); color: var(--ink); padding: 1px 8px; border-radius: 999px; }
+.card-body { padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+h1, h2 { font-family: var(--font-display); font-weight: 700; text-wrap: balance; margin: 0; letter-spacing: -0.01em; }
+h1 { font-size: clamp(26px, 6vw, 38px); line-height: 1.15; }
+h2 { font-size: clamp(19px, 4.4vw, 24px); line-height: 1.25; }
+h2:focus { outline: none; }
+p { margin: 0; max-width: 65ch; }
+.lead { font-size: 17px; }
+.muted { color: var(--muted); }
+.choices { display: flex; flex-direction: column; gap: 10px; }
+.choice {
+  display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%;
+  font: inherit; color: var(--ink); background: var(--surface); border: 1.5px solid var(--line); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: border-color .15s, background .15s, transform .1s;
+}
+.choice:hover:not(:disabled) { border-color: var(--accent); background: var(--surface-2); }
+.choice:active:not(:disabled) { transform: scale(.99); }
+.choice:focus-visible, .btn:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+.choice .key { font-family: var(--font-mono); font-weight: 600; font-size: 13px; color: var(--accent); border: 1.5px solid currentColor; border-radius: 6px; min-width: 26px; height: 26px; display: inline-flex; align-items: center; justify-content: center; flex: none; margin-top: 1px; }
+.choice:disabled { cursor: default; opacity: .45; }
+.choice.picked { opacity: 1; }
+.choice.picked.v-good { border-color: var(--good); background: var(--good-bg); }
+.choice.picked.v-mixed { border-color: var(--mixed); background: var(--mixed-bg); }
+.choice.picked.v-bad { border-color: var(--bad); background: var(--bad-bg); }
+.review { border: 1.5px solid var(--line); border-radius: 10px; overflow: hidden; animation: rise .3s ease both; }
+.review-head { font-family: var(--font-mono); font-size: 13px; font-weight: 600; padding: 8px 14px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; justify-content: space-between; }
+.review.v-good { border-color: var(--good); } .review.v-good .review-head { background: var(--good-bg); color: var(--good); }
+.review.v-mixed { border-color: var(--mixed); } .review.v-mixed .review-head { background: var(--mixed-bg); color: var(--mixed); }
+.review.v-bad { border-color: var(--bad); } .review.v-bad .review-head { background: var(--bad-bg); color: var(--bad); }
+.review-body { padding: 14px; display: flex; flex-direction: column; gap: 12px; }
+.deltas { display: flex; flex-wrap: wrap; gap: 6px; }
+.delta { font-family: var(--font-mono); font-size: 12.5px; padding: 2px 8px; border-radius: 6px; background: var(--surface-2); border: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.delta.up { color: var(--good); } .delta.down { color: var(--bad); }
+.btn { font: inherit; font-weight: 600; background: var(--accent); color: var(--accent-ink); border: 0; border-radius: 10px; padding: 12px 20px; cursor: pointer; align-self: flex-start; }
+.btn:hover { filter: brightness(1.08); }
+.btn.ghost { background: transparent; color: var(--accent); border: 1.5px solid var(--accent); }
+.row { display: flex; flex-wrap: wrap; gap: 10px; }
+.legend { display: grid; gap: 8px; padding: 0; margin: 0; list-style: none; }
+.legend li { display: flex; gap: 10px; align-items: baseline; }
+.legend code { font-family: var(--font-mono); font-size: 12.5px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 4px; padding: 1px 6px; white-space: nowrap; }
+.score { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
+.score b { font-family: var(--font-display); font-size: clamp(40px, 10vw, 56px); line-height: 1; font-variant-numeric: tabular-nums; color: var(--accent); }
+.recap { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.recap li { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 10px; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+.mark { font-family: var(--font-mono); font-weight: 600; font-size: 13px; width: 26px; height: 26px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; }
+.mark.v-good { background: var(--good-bg); color: var(--good); }
+.mark.v-mixed { background: var(--mixed-bg); color: var(--mixed); }
+.mark.v-bad { background: var(--bad-bg); color: var(--bad); }
+.recap h3 { margin: 0 0 2px; font-size: 14px; font-family: var(--font-mono); font-weight: 600; color: var(--muted); }
+.recap p { font-size: 15px; }
+.foot { font-family: var(--font-mono); font-size: 12px; color: var(--muted); text-align: center; }
+@keyframes rise { from { transform: translateY(6px); opacity: .4; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+@media (max-width: 420px) {
+  .card-body { padding: 14px; }
+  .card-head { padding: 10px 14px; }
+  .badge { font-size: 11px; }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="repo"><span>team-app / <b>open-source-quest</b></span><span class="step" id="step"></span></div>
+  <div class="stats" id="stats" aria-live="polite"></div>
+  <main id="app"></main>
+  <div class="foot">Квест «Открытый код» · учебная игра</div>
+</div>
+
+<script>
+const STAT_NAMES = { b: "бюджет", r: "репутация", q: "качество кода" };
+const VERDICTS = {
+  good:  { head: "✓ Одобрено", short: "Отличный выбор", mark: "✓" },
+  mixed: { head: "◐ Есть вопросы", short: "Спорное решение", mark: "~" },
+  bad:   { head: "✗ Нужны изменения", short: "Плохая идея", mark: "✗" }
+};
+
+const SCENES = {
+  tools: {
+    tag: "инструменты", title: "Выбор инструментов",
+    text: "Твоя команда ищет инструмент для разработки приложения. У вас ограниченный бюджет. Как поступишь?",
+    lesson: "Для большинства задач есть бесплатные open source инструменты: VS Code, Git, PostgreSQL, Linux. Пиратство незаконно и опасно, а писать всё с нуля дорого.",
+    choices: [
+      { text: "Собрать стек из open source: редактор VS Code, Git для контроля версий, база данных PostgreSQL", v: "good", d: { q: 10, r: 5 }, next: "license",
+        fb: "Эти инструменты бесплатны, ими пользуются миллионы разработчиков, у них большие сообщества и хорошая документация. Деньги остались на важные задачи." },
+      { text: "Купить платную среду разработки и коммерческую базу данных", v: "mixed", d: { b: -35, q: 5 }, next: "license",
+        fb: "Платные продукты бывают хорошими, но для небольшой команды это съело больше половины бюджета. Бесплатные открытые аналоги справились бы с этой задачей не хуже." },
+      { text: "Скачать взломанную версию платной программы с торрента", v: "bad", d: { r: -10, q: -5 }, next: "audit", set: "pirate",
+        fb: "Это нарушение авторских прав и риск для безопасности: во взломанных программах часто прячут вирусы. Компании за такое штрафуют. Зачем рисковать, если есть легальные бесплатные альтернативы?" },
+      { text: "Написать все нужные инструменты самим, с нуля", v: "bad", d: { b: -20, q: -10 }, next: "license",
+        fb: "Это «изобретение велосипеда». Готовые открытые инструменты годами улучшали тысячи людей. Свои самоделки отнимут месяцы и всё равно будут хуже." }
+    ]
+  },
+  audit: {
+    tag: "лицензии", title: "Проверка от клиента",
+    text: "Крупный клиент перед подписанием договора просит подтвердить, что всё программное обеспечение в вашей команде легальное.",
+    lesson: "Легальность ПО проверяют. Open source программы можно использовать бесплатно и законно, поэтому они лучше пиратских копий.",
+    choices: [
+      { text: "Честно признаться и за неделю перейти на открытые бесплатные аналоги", v: "good", d: { r: 5, q: 5 }, next: "license", unset: "pirate",
+        fb: "Честность сохранила доверие клиента. Переход на open source сделал всё легальным и не стоил ни рубля." },
+      { text: "Сказать, что всё лицензионное, авось не проверят", v: "bad", d: { r: -25, b: -15 }, next: "license",
+        fb: "Аудит нашёл взломанные программы. Клиент ушёл, а команде пришлось заплатить штраф. Обман почти всегда раскрывается." }
+    ]
+  },
+  license: {
+    tag: "лицензии", title: "Библиотека для графиков",
+    text: "Приложению нужна библиотека для графиков. Приложение коммерческое, и исходный код вы публиковать не планируете. Нашлось несколько вариантов:",
+    lesson: "MIT и Apache 2.0 — разрешительные лицензии: такой код можно использовать даже в закрытом коммерческом продукте, если сохранить уведомления об авторстве. GPL — «копилефт»: если распространяешь программу с GPL-кодом, обязан открыть её исходники под GPL. Код без лицензии брать нельзя.",
+    choices: [
+      { text: "ChartKit — лицензия MIT", v: "good", d: { q: 5 }, next: "attribution", set: "lib_mit",
+        fb: "MIT — одна из самых свободных лицензий. Можно использовать, изменять и продавать продукт, даже с закрытым кодом. Условие одно: сохранить текст лицензии и имя автора." },
+      { text: "OpenPlot — лицензия Apache 2.0", v: "good", d: { q: 5 }, next: "attribution", set: "lib_apache",
+        fb: "Apache 2.0 тоже разрешает коммерческое использование и закрытый код. Плюс она даёт защиту от патентных претензий со стороны авторов. Нужно сохранить файлы LICENSE и NOTICE и отметить, что вы изменили." },
+      { text: "FreeGraph — лицензия GPL-3.0. А наш код просто никому не покажем", v: "bad", d: { q: 5 }, next: "gpl_letter",
+        fb: "GPL — копилефт-лицензия. Если вы распространяете программу с GPL-кодом, вы обязаны дать пользователям её исходный код под той же лицензией. Скрыть его — нарушение." },
+      { text: "Скопировать код из чужого репозитория, где нет файла LICENSE", v: "bad", d: { r: -10 }, next: "attribution",
+        fb: "Если лицензии нет, действует обычное авторское право: все права у автора. Открытый на GitHub код ещё не значит свободный. Без лицензии его нельзя законно использовать." }
+    ]
+  },
+  gpl_letter: {
+    tag: "лицензии", title: "Письмо от автора",
+    text: "Через месяц после релиза приходит письмо от автора FreeGraph: «Ваше приложение использует мою библиотеку под GPL-3.0, но вы не опубликовали исходный код. Это нарушение лицензии».",
+    lesson: "Нарушение open source лицензии — это нарушение авторского права. Его исправляют: выполняют условия лицензии или заменяют компонент.",
+    choices: [
+      { text: "Извиниться и заменить библиотеку на аналог под MIT", v: "good", d: { b: -10 }, next: "attribution", set: "lib_mit",
+        fb: "Законный выход. Пришлось потратить время на замену, но нарушение устранено, а автор доволен вежливым ответом." },
+      { text: "Опубликовать код приложения под GPL-3.0", v: "good", d: { r: 10, b: -5 }, next: "attribution",
+        fb: "Так вы полностью выполнили лицензию, и сообщество это оценило. Учтите только, что теперь любой может законно скопировать и изменить ваше приложение." },
+      { text: "Проигнорировать письмо", v: "bad", d: { r: -25, b: -15 }, next: "attribution", set: "lib_mit",
+        fb: "GPL защищается в суде, такие дела уже выигрывали. Пришлось срочно менять библиотеку и платить юристам, а новость о нарушении испортила репутацию." }
+    ]
+  },
+  attribution: {
+    tag: "лицензии", title: "Условия лицензии",
+    text: s => `Библиотека ${s.flags.lib_apache ? "OpenPlot (Apache 2.0)" : s.flags.lib_mit ? "ChartKit (MIT)" : "для графиков"} подключена, скоро релиз. Тимлид спрашивает: «А мы выполнили условия лицензии?»`,
+    lesson: "Open source не значит «без правил». Почти все лицензии требуют сохранять имя автора и текст лицензии. Это называется атрибуцией.",
+    choices: [
+      { text: "Добавить текст лицензии и авторов библиотеки в раздел «О программе» и в файл THIRD_PARTY_NOTICES", v: "good", d: { r: 5, q: 5 }, next: "bug",
+        fb: "Так и делают крупные компании: откройте «О программе» в любом браузере и увидите длинный список open source компонентов с лицензиями." },
+      { text: "Ничего не нужно: open source — значит бесплатно и без правил", v: "bad", d: { r: -5 }, next: "bug",
+        fb: "Open source — это не «общественное достояние». Код бесплатный, но у лицензии есть условия, и почти всегда среди них сохранение уведомления об авторстве." },
+      { text: "Удалить из кода копирайты авторов, чтобы код выглядел нашим", v: "bad", d: { r: -15, q: -5 }, next: "bug",
+        fb: "Это прямое нарушение MIT и Apache и по сути плагиат. Удалять уведомления об авторстве запрещено." }
+    ]
+  },
+  bug: {
+    tag: "баг", title: "Ошибка в чужой библиотеке",
+    text: "Пользователи жалуются, что на некоторых телефонах графики не отображаются. Ты выяснил, что ошибка в открытой библиотеке, а не в вашем коде.",
+    lesson: "Issue — сообщение о проблеме. Fork — твоя копия репозитория. Pull request — предложение внести твои изменения в оригинальный проект. Лучше всего сообщить о баге или прислать исправление: тогда починится у всех.",
+    choices: [
+      { text: "Создать issue: описать баг, версию библиотеки, модель телефона и шаги воспроизведения", v: "good", d: { r: 5 }, next: "issue_reply",
+        fb: "Хороший отчёт о баге — уже вклад в проект. По шагам воспроизведения мейнтейнеры быстро найдут проблему." },
+      { text: "Исправить баг самому и отправить pull request в оригинальный репозиторий", v: "good", d: { r: 10, q: 10 }, next: "review", set: "contributor",
+        fb: "Лучший вариант: ты не только чинишь свою проблему, но и помогаешь всем, кто пользуется библиотекой. Так и работает open source." },
+      { text: "Сделать fork, тихо исправить у себя и никому не говорить", v: "mixed", d: { q: 5 }, next: "fork_drift", set: "fork",
+        fb: "Сейчас это работает, но теперь вам самим придётся поддерживать свою копию и переносить в неё все обновления оригинала. Остальные пользователи так и живут с багом." },
+      { text: "Написать в issues: «Ваша библиотека — мусор, почините немедленно!»", v: "bad", d: { r: -15 }, next: "community",
+        fb: "Мейнтейнеры часто работают бесплатно, в свободное время. Грубость никого не мотивирует. Твой комментарий закрыли, а баг остался." }
+    ]
+  },
+  issue_reply: {
+    tag: "сообщество", title: "Ответ мейнтейнера",
+    text: "Через два дня мейнтейнер ответил: «Спасибо за подробный отчёт! У нас мало рук. Может, пришлёшь pull request с исправлением?»",
+    lesson: "Open source держится на добровольцах. Никто не обязан чинить твой баг, но любой может помочь проекту сам.",
+    choices: [
+      { text: "Да! Прочитать CONTRIBUTING.md и прислать pull request", v: "good", d: { r: 10, q: 10 }, next: "review", set: "contributor",
+        fb: "CONTRIBUTING.md описывает, как в проекте принято присылать изменения. Если прочитать его заранее, ревью пройдёт быстрее." },
+      { text: "Нет, подождём, пока кто-нибудь починит", v: "mixed", d: { q: -5 }, next: "community",
+        fb: "Баг починили только через полтора месяца, всё это время пользователи жаловались. Ты мог ускорить исправление." }
+    ]
+  },
+  review: {
+    tag: "pull request", title: "Код-ревью",
+    text: "Мейнтейнер посмотрел твой pull request и оставил замечания: «Добавь, пожалуйста, тест на этот случай и оформи код по нашему стилю».",
+    lesson: "Код-ревью — обычная часть работы, а не критика лично тебя. Замечания помогают сохранить качество проекта.",
+    choices: [
+      { text: "Поблагодарить, добавить тест и поправить стиль", v: "good", d: { r: 10, q: 10 }, next: "community",
+        fb: "Твой PR приняли! Теперь ты в списке контрибьюторов проекта, это хорошая строчка в резюме. А тест защитит от того, чтобы баг вернулся." },
+      { text: "Обидеться и закрыть PR: «Код же работает!»", v: "bad", d: { r: -10 }, next: "community", unset: "contributor",
+        fb: "Тесты и единый стиль нужны, чтобы проект можно было поддерживать годами. Исправление так и не попало в библиотеку." }
+    ]
+  },
+  fork_drift: {
+    tag: "поддержка", title: "Форк отстал",
+    text: "Прошло три месяца. В оригинальной библиотеке вышло пять обновлений, в том числе исправление уязвимости. Твой форк сильно отстал, и обновления конфликтуют с твоими правками.",
+    lesson: "Свой форк приходится поддерживать самому. Чаще всего выгоднее отправить исправление в оригинальный проект (upstream).",
+    choices: [
+      { text: "Отправить своё исправление в оригинальный проект через pull request и вернуться на официальную версию", v: "good", d: { r: 10, q: 10 }, next: "community", set: "contributor", unset: "fork",
+        fb: "Исправление приняли, и теперь вы получаете все обновления бесплатно. Поддерживать отдельную копию больше не нужно." },
+      { text: "Каждый раз вручную переносить обновления в свой форк", v: "mixed", d: { b: -15 }, next: "community",
+        fb: "Работает, но отнимает много часов разработчиков, а время — это деньги. И так при каждом обновлении." },
+      { text: "Оставить форк как есть, и так работает", v: "bad", d: { q: -15 }, next: "community", set: "vuln",
+        fb: "В вашей копии осталась известная уязвимость, исправленная в оригинале. Это бомба замедленного действия." }
+    ]
+  },
+  community: {
+    tag: "code of conduct", title: "Грубость в обсуждении",
+    text: "В обсуждениях библиотеки новичок задал простой вопрос. Один из участников ответил грубо и высмеял его.",
+    lesson: "Code of Conduct (кодекс поведения) — правила общения в проекте. Он защищает участников, а нарушения можно сообщать мейнтейнерам.",
+    choices: [
+      { text: "Вежливо помочь новичку и сообщить о нарушении мейнтейнерам по контакту из CODE_OF_CONDUCT.md", v: "good", d: { r: 10 }, next: "security",
+        fb: "Так и нужно. Новичок остался в проекте и через месяц прислал свой первый PR, а мейнтейнеры напомнили грубияну о правилах." },
+      { text: "Ответить грубияну ещё грубее", v: "bad", d: { r: -10 }, next: "security",
+        fb: "Теперь нарушителей двое. Ссора разрослась, обсуждение пришлось закрыть. Грубость не лечат грубостью." },
+      { text: "Промолчать, это не моё дело", v: "mixed", d: {}, next: "security",
+        fb: "Ничего не сломалось, но новичок ушёл из проекта. Здоровое сообщество — общая ответственность." }
+    ]
+  },
+  security: {
+    tag: "безопасность", title: "Уязвимость в зависимости",
+    text: "Dependabot, автоматический сканер зависимостей, сообщает: в одной из библиотек вашего приложения найдена критическая уязвимость. Исправленная версия уже вышла.",
+    lesson: "Зависимости надо регулярно обновлять. Уязвимости в open source публикуются открыто (с номерами CVE), поэтому злоумышленники тоже о них знают.",
+    choices: [
+      { text: "Обновить зависимость, прогнать тесты и выпустить патч", v: "good", d: { q: 10, r: 5, b: -5 }, next: s => s.flags.vuln ? "incident" : "opensource",
+        fb: "Правильно. Обновление заняло час, а тесты подтвердили, что ничего не сломалось.",
+        fbIf: { flag: "vuln", text: " Но в вашем старом форке библиотеки графиков осталась другая уязвимость, а сканер его не проверял…" } },
+      { text: "Отложить: приложение же работает", v: "bad", d: {}, next: "incident", set: "vuln",
+        fb: "Описание уязвимости уже опубликовано, и ей начали пользоваться злоумышленники. «Потом» может оказаться слишком поздно." },
+      { text: "Отключить сканер, чтобы не мешал", v: "bad", d: { q: -10 }, next: "incident", set: "vuln",
+        fb: "Уязвимость никуда не делась, вы просто перестали её видеть. Это как выключить пожарную сигнализацию." }
+    ]
+  },
+  incident: {
+    tag: "инцидент", title: "Утечка данных",
+    text: "Злоумышленники воспользовались известной уязвимостью в устаревшей библиотеке. Часть данных пользователей могла утечь.",
+    lesson: "При инциденте безопасности важно быстро исправить проблему и честно сообщить пользователям. Скрывать утечку — хуже, а во многих странах ещё и незаконно.",
+    choices: [
+      { text: "Срочно обновить библиотеку, честно сообщить пользователям и рассказать, что сделано", v: "good", d: { r: -10, q: 10 }, next: "opensource",
+        fb: "Репутация пострадала, но честность помогла её сохранить. Пользователи оценили открытость, а команда настроила регулярные обновления." },
+      { text: "Тихо исправить и ничего никому не говорить", v: "bad", d: { r: -25 }, next: "opensource",
+        fb: "Журналисты узнали об утечке сами. Теперь пользователи не доверяют не только защите, но и честности команды." }
+    ]
+  },
+  opensource: {
+    tag: "свой проект", title: "Открыть свой код?",
+    text: "Приложение работает, команда выросла. За это время вы написали удобную внутреннюю библиотеку для работы с картами. Тимлид предлагает: «Может, выложим её в open source?»",
+    lesson: "Чтобы открыть проект, нужны лицензия (LICENSE), описание (README), правила участия (CONTRIBUTING) и кодекс поведения. Перед публикацией обязательно уберите из кода пароли и ключи. Поддерживать open source можно и деньгами.",
+    choices: [
+      { text: "Открыть под MIT: добавить README, LICENSE, CONTRIBUTING.md и CODE_OF_CONDUCT.md", v: "good", d: { r: 20, q: 5 }, next: null,
+        fb: "Проект получил сотни звёзд, внешние разработчики нашли пару багов и прислали исправления. Команда стала известной, и к вам хотят на работу." },
+      { text: "Оставить закрытой, но финансово поддерживать open source проекты, которыми пользуемся", v: "good", d: { b: -10, r: 10 }, next: null,
+        fb: "Тоже достойный вклад. Через GitHub Sponsors или Open Collective вы помогаете мейнтейнерам, на чьей работе держится ваше приложение." },
+      { text: "Выложить код на GitHub как есть, без лицензии и описания", v: "mixed", d: {}, next: null,
+        fb: "Без лицензии никто не имеет права законно использовать этот код, а без README непонятно, что это и как запустить. Проект никто не заметил." },
+      { text: "Выложить побыстрее, прямо с файлом .env, где лежат пароли и ключи от серверов", v: "bad", d: { r: -20, q: -10 }, next: null,
+        fb: "Боты сканируют GitHub в поисках ключей и находят их за минуты. Сервера взломали. Перед публикацией обязательно проверяйте, что секретов в коде нет." }
+    ]
+  }
+};
+
+const START = { b: 60, r: 40, q: 50 };
+let state;
+
+function fresh() {
+  return { phase: "intro", scene: null, stats: { ...START }, flags: {}, history: [], picked: null, over: null };
+}
+
+const app = document.getElementById("app");
+const esc = t => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const val = (x, s) => typeof x === "function" ? x(s) : x;
+const lvl = n => n >= 60 ? "lvl-hi" : n >= 30 ? "lvl-mid" : "lvl-lo";
+
+function renderStats() {
+  document.getElementById("stats").innerHTML = Object.keys(STAT_NAMES).map(k => {
+    const n = state.stats[k];
+    return `<div class="stat" title="${STAT_NAMES[k]}"><div class="badge"><span class="k">${k === "q" ? "качество" : STAT_NAMES[k]}</span><span class="v ${lvl(n)}">${n}</span></div><div class="bar"><i style="width:${n}%"></i></div></div>`;
+  }).join("");
+  const step = document.getElementById("step");
+  step.textContent = state.phase === "scene" ? `решение № ${state.history.length + (state.picked === null ? 1 : 0)}` : state.phase === "end" ? "квест завершён" : "";
+}
+
+function render(focus) {
+  renderStats();
+  if (state.phase === "intro") renderIntro();
+  else if (state.phase === "scene") renderScene();
+  else renderEnd();
+  if (focus) {
+    const h = app.querySelector("h1, h2");
+    if (h) { h.setAttribute("tabindex", "-1"); h.focus({ preventScroll: true }); }
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+}
+
+function renderIntro() {
+  app.innerHTML = `
+  <article class="card">
+    <div class="card-head"><span class="state">● открыто</span><span>#0 · первый рабочий день</span><span class="label">онбординг</span></div>
+    <div class="card-body">
+      <h1>Квест «Открытый код»</h1>
+      <p class="lead">Ты стал новым разработчиком в небольшой IT-команде. Команда работает над приложением, но сталкивается с несколькими проблемами. Тебе предстоит принимать решения, используя знания об Open Source.</p>
+      <p class="muted">Каждое решение влияет на три показателя. Если бюджет или репутация упадут до нуля, проект закроется.</p>
+      <ul class="legend">
+        <li><code>бюджет</code><span>деньги команды</span></li>
+        <li><code>репутация</code><span>доверие клиентов, пользователей и сообщества</span></li>
+        <li><code>качество кода</code><span>насколько надёжно и безопасно приложение</span></li>
+      </ul>
+      <button class="btn" id="start">Начать квест</button>
+    </div>
+  </article>`;
+  document.getElementById("start").onclick = () => go("tools");
+}
+
+function renderScene() {
+  const sc = SCENES[state.scene];
+  const n = state.history.length + (state.picked === null ? 1 : 0);
+  const keys = "ABCD";
+  let html = `
+  <article class="card">
+    <div class="card-head"><span class="state">● открыто</span><span>#${n} · ${esc(sc.title)}</span><span class="label">${esc(sc.tag)}</span></div>
+    <div class="card-body">
+      <h2>${esc(sc.title)}</h2>
+      <p class="lead">${esc(val(sc.text, state))}</p>
+      <div class="choices">
+        ${order().map((i, pos) => {
+          const c = sc.choices[i];
+          const picked = state.picked === i;
+          return `<button class="choice ${picked ? "picked v-" + c.v : ""}" data-i="${i}" ${state.picked !== null ? "disabled" : ""}><span class="key">${keys[pos]}</span><span>${esc(c.text)}</span></button>`;
+        }).join("")}
+      </div>`;
+  if (state.picked !== null) {
+    const c = sc.choices[state.picked];
+    const V = VERDICTS[c.v];
+    const fb = c.fb + (c.fbIf && state.lastFlags && state.lastFlags[c.fbIf.flag] ? c.fbIf.text : "");
+    const deltas = Object.keys(STAT_NAMES).filter(k => c.d[k]).map(k =>
+      `<span class="delta ${c.d[k] > 0 ? "up" : "down"}">${STAT_NAMES[k]} ${c.d[k] > 0 ? "+" : "−"}${Math.abs(c.d[k])}</span>`).join("");
+    html += `
+      <section class="review v-${c.v}" aria-live="polite">
+        <div class="review-head"><span>${V.head}</span><span>${V.short}</span></div>
+        <div class="review-body">
+          <p>${esc(fb)}</p>
+          <div class="deltas">${deltas || `<span class="delta">показатели без изменений</span>`}</div>
+          <button class="btn" id="next">${nextLabel(c)}</button>
+        </div>
+      </section>`;
+  }
+  html += `</div></article>`;
+  app.innerHTML = html;
+  app.querySelectorAll(".choice").forEach(b => b.onclick = () => pick(+b.dataset.i));
+  const nb = document.getElementById("next");
+  if (nb) { nb.onclick = advance; nb.focus({ preventScroll: true }); nb.scrollIntoView({ block: "nearest", behavior: "smooth" }); }
+}
+
+function nextLabel(c) {
+  if (state.stats.b <= 0 || state.stats.r <= 0) return "Чем всё закончилось →";
+  return val(c.next, state) ? "Дальше →" : "К итогам →";
+}
+
+function pick(i) {
+  if (state.picked !== null) return;
+  const c = SCENES[state.scene].choices[i];
+  state.lastFlags = { ...state.flags };
+  for (const k in c.d) state.stats[k] = Math.max(0, Math.min(100, state.stats[k] + c.d[k]));
+  if (c.set) state.flags[c.set] = true;
+  if (c.unset) delete state.flags[c.unset];
+  state.picked = i;
+  state.history.push({ scene: state.scene, i, v: c.v });
+  render(false);
+}
+
+function advance() {
+  const c = SCENES[state.scene].choices[state.picked];
+  if (state.stats.b <= 0) return finish("budget");
+  if (state.stats.r <= 0) return finish("rep");
+  const nx = val(c.next, state);
+  if (!nx) return finish(null);
+  go(nx);
+}
+
+function shuffle(n) {
+  const a = [...Array(n).keys()];
+  for (let i = n - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+// Варианты ответа перемешиваются при каждом показе сцены, чтобы правильный не стоял всегда первым.
+function order() {
+  const n = SCENES[state.scene].choices.length;
+  if (!state.order || state.order.length !== n || state.orderFor !== state.scene) { state.order = shuffle(n); state.orderFor = state.scene; }
+  return state.order;
+}
+function go(id) { state.phase = "scene"; state.scene = id; state.picked = null; state.order = null; render(true); }
+function finish(over) { state.phase = "end"; state.over = over; state.picked = null; render(true); }
+
+function ending() {
+  const s = state.stats, total = s.b + s.r + s.q;
+  const good = state.history.filter(h => h.v === "good").length;
+  if (state.over === "budget") return { t: "Деньги закончились", d: "Бюджет команды иссяк, и проект пришлось заморозить. Многие траты можно было заменить бесплатными open source решениями.", state: "закрыто" };
+  if (state.over === "rep") return { t: "Доверие потеряно", d: "Клиенты и сообщество перестали доверять команде, и проект закрыли. Нарушения лицензий, обман и грубость дорого обходятся.", state: "закрыто" };
+  if (total >= 220 && state.flags.contributor) return { t: "Герой open source", d: "Ты не только пользуешься открытым кодом, но и улучшаешь его: исправления, честная работа с лицензиями, забота о сообществе. Тебя знают за пределами команды.", state: "смержено" };
+  if (total >= 175) return { t: "Надёжный разработчик", d: "Ты принимал в основном взвешенные решения. Команда тебе доверяет, а приложение работает стабильно. Следующий шаг — активнее делиться своими исправлениями с сообществом.", state: "смержено" };
+  if (total >= 125) return { t: "Ученик с потенциалом", d: "Проект выжил, хотя некоторые решения стоили команде денег или репутации. Перечитай уроки ниже: в следующий раз будет проще.", state: "завершено" };
+  return { t: "Трудный старт", d: "Проект едва держится на плаву. Хорошая новость: все эти ошибки можно исправить, если разобраться в основах Open Source. Попробуй пройти квест ещё раз.", state: "завершено" };
+}
+
+function renderEnd() {
+  const e = ending(), s = state.stats, total = s.b + s.r + s.q;
+  const good = state.history.filter(h => h.v === "good").length;
+  const items = state.history.map(h => {
+    const sc = SCENES[h.scene];
+    return `<li><span class="mark v-${h.v}" aria-label="${VERDICTS[h.v].short}">${VERDICTS[h.v].mark}</span><div><h3>${esc(sc.title)}</h3><p>${esc(sc.lesson)}</p></div></li>`;
+  }).join("");
+  app.innerHTML = `
+  <article class="card">
+    <div class="card-head"><span class="state closed">● ${e.state}</span><span>итоги квеста</span><span class="label">концовка</span></div>
+    <div class="card-body">
+      <h1>${esc(e.t)}</h1>
+      <p class="lead">${esc(e.d)}</p>
+      <div class="score"><b>${total}</b><span class="muted">очков из 300 · удачных решений: ${good} из ${state.history.length}</span></div>
+      <div class="row"><button class="btn" id="restart">Сыграть ещё раз</button></div>
+    </div>
+  </article>
+  <section class="card">
+    <div class="card-head"><span>Что ты узнал</span></div>
+    <div class="card-body"><ul class="recap">${items}</ul>
+      <button class="btn ghost" id="restart2">Начать заново</button>
+    </div>
+  </section>`;
+  document.getElementById("restart").onclick = restart;
+  document.getElementById("restart2").onclick = restart;
+}
+
+function restart() { state = fresh(); go("tools"); }
+
+document.addEventListener("keydown", e => {
+  if (state.phase !== "scene" || e.ctrlKey || e.metaKey || e.altKey) return;
+  const k = e.key.toLowerCase();
+  const map = { a: 0, b: 1, c: 2, d: 3, "1": 0, "2": 1, "3": 2, "4": 3, "ф": 0, "и": 1, "с": 2, "в": 3 };
+  const ord = order();
+  if (state.picked === null && k in map && map[k] < ord.length) pick(ord[map[k]]);
+});
+
+function start(data) {
+  state = data && data.phase ? data : fresh();
+  render(false);
+}
+window.claude?.hot?.snapshot?.(() => state);
+window.claude?.hot?.ready ? window.claude.hot.ready(start) : start(window.claude?.hot?.data ?? {});
+</script>
+</body>
+</html>
